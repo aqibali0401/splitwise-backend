@@ -1,0 +1,152 @@
+const User = require('../models/users');
+const { body, validationResult } = require('express-validator');
+const nodemailer = require('nodemailer');
+
+
+exports.getUsers = async (req, res, next) => {
+
+    res.send("hello from user controler");
+
+}
+
+exports.addFriends = async (req, res) => {
+    try {
+        const userId = req.user;
+        const body = { ...req.body };
+        // const userEmail = await User.findOne({ _id: userId }).select("email");
+        let success = false;
+        console.log(body);
+        const friendList = [];
+        const notFoundUsers = [];
+        for (let i = 0; i < body.friends.length; i++) {
+            const friendId = await User.findOne({ email: body.friends[i] }).select("_id");
+            if (!friendId) {
+                notFoundUsers.push(friendId);
+            }
+            if (friendId._id.equals(userId)) {
+                continue;
+            }
+            friendList.push(friendId._id);
+        }
+
+        if (friendList.length < 1) {
+            return res.status(400).send({
+                success,
+                error: "Non of your friend registerd with us, to add them in your friend list sent invite link to thme!!",
+                result: notFoundUsers
+            })
+        }
+
+        const friendsData = await User.findOne({ _id: userId }).select('friends');
+        const friendListPrevious = friendsData.friends;
+
+        const totalFriends = friendListPrevious.concat(friendList);
+        // const finalFriendList = [...new Set(totalFriends)];
+
+        let finalFriendList = [];
+        for (let i = 0; i < totalFriends.length; i++) {
+            // if(finalFriendList.indexOf(totalFriends[i]) === -1){
+            //     finalFriendList.push(totalFriends[i]);
+            // }
+            let flag = false;
+            for (let j = 0; j < finalFriendList.length; j++) {
+                if (finalFriendList[j].equals(totalFriends[i])) {
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag == false) {
+                finalFriendList.push(totalFriends[i]);
+            }
+        }
+
+        const finalFriends = await User.findOneAndUpdate({ _id: userId }, {
+            $set: { friends: finalFriendList }
+        })
+        success = true;
+        res.status(200).send({
+            success,
+            message: 'Friends added successfully',
+            result: finalFriends
+        })
+    } catch (error) {
+        res.status(400).send({
+            error: "Could not able to add friend"
+        })
+    }
+
+}
+
+exports.fetchFriends = async (req, res) => {
+    try {
+        const userId = req.user;
+        const friendList = await User.findById({ _id: userId }).select('friends');
+
+        if (!friendList.friends) {
+            return res.status(400).send({
+                error: "You dont have any friends till now!! "
+            })
+        }
+
+        const friendsDetails = [];
+        for (let i = 0; i < friendList.friends.length; i++) {
+            let friendData = await User.findById({ _id: friendList.friends[i] });
+            friendsDetails.push(friendData);
+        }
+
+        res.status(200).send({
+            message: 'Friends fetched successfully',
+            result: friendsDetails
+        })
+
+
+    } catch (error) {
+        res.status(400).send({
+            error: "Could not able to fetch friends"
+        })
+    }
+
+}
+
+
+exports.fetchUserDetails = async (req, res) => {
+    try {
+        const userId = req.user;
+        const friendList = await User.findById({ _id: userId });
+        console.log(friendList);
+        return res.status(200).send({
+            message: 'User details fetched successfully',
+            result: friendList
+        })
+    } catch (error) {
+        return res.status(400).send({
+            error: "Could not able to fetch user details"
+        })
+    }
+};
+
+
+exports.inviteFriend = async (req, res) => {
+    [
+        body('email', 'Enter a valid email').isEmail().normalizeEmail().trim()
+    ], async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ error: errors.array() })
+        }
+        try {
+            
+        } catch (error) {
+            
+        }
+
+
+
+
+    }
+
+
+
+
+}
+
