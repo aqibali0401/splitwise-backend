@@ -1,15 +1,15 @@
 const User = require('../models/users');
 const Group = require('../models/groups');
+const Friend = require('../models/friends');
 const asyncMiddleware = require('../middleware/async');
 const { body, validationResult } = require('express-validator');
-const { checkValueInArray } = require('./init/functions');
+const { checkValueInArray } = require('../init/functions');
+const fun = require('../init/functions')
 
 // Route 1: Creating a user using POST "/api/v1/auth/register"   ->  No login required
 module.exports.createGroup = ([
     body('groupName', 'Enter a valid group name').isLength({ min: 3 }).trim(),
-    body('groupType', 'Select a valid group type').matches(/^[a-zA-Z][\w\s-]+/).isEmpty().isLength({ min: 3 }),
-    
-
+    body('groupType', 'Select a valid group type').matches(/^[a-zA-Z][\w\s-]+/).isEmpty().isLength({ min: 3 })
 ], async (req, res) => {
     // If their are errors, return bad request and the errors
     const errors = validationResult(req);
@@ -18,12 +18,29 @@ module.exports.createGroup = ([
     }
     try {
         let success = false;
-        // check wheather the group with this groupName exists already
-        let group = await Group.findOne({ groupName: req.body.groupName });
+
+        body.admin = req.user; //Assigning the id of group admin
+        body.groupName = fun.Capitalize(body.groupName); // To capitalize each word of group name
+        const query_filter = {
+            $and: [
+                { groupName: body.groupName },
+                {
+                    $or: [
+                        { admin: body.admin },
+                        { "members": body.admin }
+                    ]
+
+                }
+            ]
+        };
+
+        // check wheather the group with this groupName exists already 
+        let group = await Group.findOne(query_filter);
         if (group) {
             return res.status(400).json({ success, error: "sorry a group with this group Name is already exists! give another Name to your group" });
         }
         const { groupName, groupType, members: membersList } = req.body;
+
         const members = [];
         const notFoundMembers = [];
 
@@ -37,11 +54,6 @@ module.exports.createGroup = ([
             }
         }
 
-        // console.log("members", members);
-        // console.log("notFoundMembers", notFoundMembers);
-
-        // create a group using above details
-        const admin = req.user;
 
         if (notFoundMembers.length > 0) {
             if (notFoundMembers.length === 1) {
@@ -49,21 +61,60 @@ module.exports.createGroup = ([
             } else {
                 return res.status(400).json({ success, error: `${notFoundMembers} -> These members are not registered with us, send invite link to them then try to create group!!` });
             }
-
         }
         else {
-            // console.log(members);
             success = true;
-            /// dikkat dera he
+            body.members = members;
+            const newGroup = new Group(body);
+            const newGroupSaved = await newGroup.save();
+            if (!newGroupSaved) {
+                return res.status(401).send({ error: "Unable to create group due to some technical error! Please try again!" });
+            } else {
+                let flag = false;
+                for (let i = 0; i < members.length; i++) {
+                    // Query filter to search for existing mapping between both users
+                    const query_filter1 = {
+                        $or: [
+                            {
+                                $and: [
+                                    { added_by: body.admin },
+                                    { friend: members[i] }
+                                ]
+                            },
+                            {
+                                $and: [
+                                    { added_by: members[i] },
+                                    { friend: body.admin }
+                                ]
+                            }
+                        ]
+                    };
 
-            group = await Group.create({ groupName, admin, groupType, members });
-            group.save();
-            console.log("group", group);
-            return res.status(200).send({
-                success,
-                message: "group created successfully",
-                result: group
-            })
+                    const ExistingFriends = await Friend.findOne(query_filter1);
+                    if (ExistingFriends) {
+                        continue;
+                    } else {
+                        const newFriend = {
+                            added_by: body.admin,
+                            friend: members[i]
+                        };
+
+                        const createnewFriend = new Friend(newFriend);
+                        const addNewFriend = await createnewFriend.save();
+                        if (!addNewFriend) {
+                            flag = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (flag) {
+                    return res.status(500).send({ error: 'Internal server error!' });
+                } else {
+                    return res.status(200).send({ message: 'Group created successfully' });
+                }
+            }
+
         }
     } catch (error) {
         console.error(error.message);

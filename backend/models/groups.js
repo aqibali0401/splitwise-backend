@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
-const groupSchema = new mongoose.Schema({
+const groupSchema = new mongoose.Schema({    
+    id: mongoose.Schema.Types.ObjectId,
     groupName: { type: String },
     admin: {
         type: mongoose.Schema.Types.ObjectId,
@@ -10,7 +11,7 @@ const groupSchema = new mongoose.Schema({
         type: String,
         enum: ["Trip", "Party", "Home", "Other"]
     },
-    createdAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now() },
     members: [
         {
             type: mongoose.Schema.Types.ObjectId,
@@ -19,5 +20,4 @@ const groupSchema = new mongoose.Schema({
     ]
 })
 
-const Group = mongoose.model('Group', groupSchema);
-module.exports = Group;
+module.exports = mongoose.model('Group', groupSchema);
