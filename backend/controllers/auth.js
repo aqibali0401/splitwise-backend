@@ -3,7 +3,7 @@ const asyncMiddleware = require('../middleware/async');
 const bcrypt = require('bcrypt');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer'); 
+const nodemailer = require('nodemailer');
 
 
 // Route 1: Creating a user using POST "/api/v1/auth/register"   ->  No login required
@@ -24,10 +24,10 @@ module.exports.createUser = ([
         if (user) {
             return res.status(400).json({ success, error: "sorry a user with this email is already exists!!" });
         }
-        const {userName , password, email } = req.body;
+        const { userName, password, email } = req.body;
 
         const hashPass = await bcrypt.hash(req.body.password, 12);
-        
+
         user = await User.create({ userName, email, password: hashPass });
         const data = {
             user: {
@@ -68,7 +68,7 @@ module.exports.loginUser = ([
         if (!validUser) {
             return res.status(400).json({ error: "Please try to login with correct credentials!!" });
         }
-        
+
         const data = {
             user: {
                 id: user._id,
@@ -127,8 +127,8 @@ module.exports.forgotPasswordPost = ([
         }
         const token = jwt.sign(payload, secret, { expiresIn: '15m' });
         const link = `http://localhost:3000/reset-password/${user.id}/${token}`;
-        
-        // have to send email by node mailer  
+
+        // have to send reset pass email by node mailer  
         const msg = {
             from: "aqibali.cse18@satyug.edu.in", // sender address
             to: "aqibali0401@gmail.com", // list of receivers
@@ -225,6 +225,64 @@ module.exports.resetPasswordPost = (async (req, res) => {
         res.send(500).send("Internal server error!!", error.message);
     }
 });
+
+module.exports.inviteFriend = ([
+    body('email', 'Enter a valid email').isEmail().normalizeEmail().trim()
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+        const { email } = req.body;
+        let success = false;
+
+        // make sure user does not exist in database
+        const user = await User.findOne({ email });
+        if (user) {
+            return res.status(400).jsons({ success, error: "User already registerd with us!!" });
+        }
+
+        const link = `http://localhost:5000/api/v1/auth/createuser`;
+
+        // have to send invite email by node mailer  
+        const msg = {
+            from: "aqibali.cse18@satyug.edu.in", // sender address
+            to: "aqibali0401@gmail.com", // list of receivers
+            subject: "Hello ✔ NodeMailer testing for User invitation", // Subject line
+            // text: `this is link for reset password ->  ${link}`, // plain text body
+            html: ` <h1>This is mail form Split Wise Clone By Aqib</h1>
+            <h3>Hi your friend invites you to Splitwise for share expenses</h3>
+         <a href="${link}" style="color: blue;">Click here for register with splitwise</a>`, // html body
+        }
+        nodemailer.createTransport({
+            service: 'gmail.com',
+            auth: {
+                user: "aqibali.cse18@satyug.edu.in",
+                pass: "uuantsfgeavarzge"
+            },
+            port: 465,
+            host: 'smtp.gmail.com'
+        })
+        .sendMail(msg, (err) => {
+            if (err) {
+                console.log('Error occurs ', err);
+            } else {
+                console.log('Invitation Email sent successfully!!');
+            }
+        })
+
+        success = true;
+        return res.stauts(200).send({
+            success,
+            message: `Invitation mail has sent to ${email} successfully!!`
+        })
+
+    } catch (error) {
+        console.error(error.message);
+        res.send(500).send("Internal server error!!");
+    }
+})
 
 
 

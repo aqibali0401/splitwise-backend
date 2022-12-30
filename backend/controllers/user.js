@@ -16,7 +16,6 @@ exports.addFriends = async (req, res) => {
         const body = { ...req.body };
         // const userEmail = await User.findOne({ _id: userId }).select("email");
         let success = false;
-        // console.log(body);
         const friends = [];
         const notFoundUsers = [];
         for (let i = 0; i < body.friends.length; i++) {
@@ -37,7 +36,6 @@ exports.addFriends = async (req, res) => {
                 result: notFoundUsers
             })
         }
-
 
         // const friendsData = await User.findOne({ _id: userId }).select('friends');
         // const friendListPrevious = friendsData.friends;
@@ -74,23 +72,27 @@ exports.addFriends = async (req, res) => {
 
         // ashwani friends code
         let flag = false;
-        for(let i = 0 ; i < friends.length; i++) {
+        for (let i = 0; i < friends.length; i++) {
             // Query filter to search for existing mapping between both users
             const query_filter = {
                 $or: [
-                    {$and: [
-                        {added_by: userId},
-                        {friend: friends[i]}
-                    ]},
-                    {$and: [
-                        {added_by: friends[i]},
-                        {friend: userId}
-                    ]}
+                    {
+                        $and: [
+                            { added_by: userId },
+                            { friend: friends[i] }
+                        ]
+                    },
+                    {
+                        $and: [
+                            { added_by: friends[i] },
+                            { friend: userId }
+                        ]
+                    }
                 ]
             };
 
             const ExistingFriends = await Friend.findOne(query_filter);
-            if(ExistingFriends) {
+            if (ExistingFriends) {
                 continue;
             } else {
                 const newFriend = {
@@ -100,20 +102,18 @@ exports.addFriends = async (req, res) => {
 
                 const createnewFriend = new Friend(newFriend);
                 const addNewFriend = await createnewFriend.save();
-                if(!addNewFriend) {
+                if (!addNewFriend) {
                     flag = true;
                     break;
                 }
             }
         }
 
-        if(flag) {
-            return res.status(500).send({error: 'Internal server error!'});
+        if (flag) {
+            return res.status(500).send({ error: 'Internal server error!' });
         } else {
             return res.status(200).send({ message: "All of your friends are added!" });
         }
-
-
 
     } catch (error) {
         res.status(400).send({
@@ -126,24 +126,43 @@ exports.addFriends = async (req, res) => {
 exports.fetchFriends = async (req, res) => {
     try {
         const userId = req.user;
-        const friendList = await User.findById({ _id: userId }).select('friends');
+        const query_filter = {
+            $or: [
+                { added_by: userId },
+                { friend: userId }
+            ]
+        };
+        const friendList = await Friend.find(query_filter).populate('added_by friend', 'userName email');
 
-        if (!friendList.friends) {
+        if (!friendList) {
             return res.status(400).send({
                 error: "You dont have any friends till now!! "
             })
         }
 
-        const friendsDetails = [];
-        for (let i = 0; i < friendList.friends.length; i++) {
-            let friendData = await User.findById({ _id: friendList.friends[i] });
-            friendsDetails.push(friendData);
+        let myFriends = [];
+        for (let i = 0; i < friendList.length; i++) {
+            if ((friendList[i].added_by._id).equals(userId)) {
+                myFriends.push({
+                    friend: friendList[i].friend,
+                    balances: friendList[i].balances
+                });
+            } else if ((friendList[i].friend._id).equals(userId)) {
+                myFriends.push({
+                    friend: friendList[i].added_by,
+                    balances: friendList[i].balances
+                });
+            }
         }
 
-        res.status(200).send({
-            message: 'Friends fetched successfully',
-            result: friendsDetails
-        })
+        if (myFriends.length < 1) {
+            return res.status(404).send({ error: "No friends found associated with you!" });
+        } else {
+            return res.status(200).json({
+                message: "Friends fetched successfully",
+                result: myFriends
+            });
+        }
 
 
     } catch (error) {
@@ -159,7 +178,6 @@ exports.fetchUserDetails = async (req, res) => {
     try {
         const userId = req.user;
         const friendList = await User.findById({ _id: userId });
-        console.log(friendList);
         return res.status(200).send({
             message: 'User details fetched successfully',
             result: friendList
@@ -181,9 +199,9 @@ exports.inviteFriend = async (req, res) => {
             return res.status(400).json({ error: errors.array() })
         }
         try {
-            
+
         } catch (error) {
-            
+
         }
 
 
