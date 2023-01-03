@@ -14,7 +14,7 @@ router.delete('/:expenseId', [authMiddleware], expenseController.deleteExpense);
 router.post('/:expenseId', [authMiddleware], expenseController.updateExpense);
 
 // Route 4 : Settle Expense: Using POST '/settleExpense   (Login required)
-router.post('/settleExpense', [authMiddleware], expenseController.settleExpense);
+router.post('/settle/settleExpense', [authMiddleware], expenseController.settleExpense);
 
 
 module.exports = router;

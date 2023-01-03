@@ -28,7 +28,7 @@ const expenseSchema = new mongoose.Schema({
     split_method: {
         type: String,
         required: true,
-        enum: ['equally', 'exact_amounts', 'pecentage', 'share', 'adjustment', 'reimbursment', 'itemised']
+        enum: ['equally', 'exact_amounts', 'pecentage', 'share']
     },
     split_between: [
         {

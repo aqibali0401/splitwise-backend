@@ -1,7 +1,6 @@
 const User = require('../models/users');
 const Friend = require('../models/friends');
 const { body, validationResult } = require('express-validator');
-const nodemailer = require('nodemailer');
 
 
 exports.getUsers = async (req, res, next) => {

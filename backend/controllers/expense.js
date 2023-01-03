@@ -9,8 +9,6 @@ const { ObjectId } = require('mongodb');
 const asyncMiddleware = require('../middleware/async');
 
 // Models
-const User = require('../models/users');
-const Group = require('../models/groups');
 const Friend = require('../models/friends');
 const Expense = require('../models/expenses');
 
@@ -387,9 +385,26 @@ exports.updateExpense = asyncMiddleware(async (req, res) => {
 
 });
 
-exports.settleExpense = asyncMiddleware(async (req, res) => {
-   
-   const userId = req.user;
+exports.settleExpense = (async (req, res) => {
+
+    try {
+
+        const body = { ...req.body };
+
+        // const paidUser = new ObjectId(body.paidBy);
+        // const paidTo = new ObjectId(body.paidTo);
+        const paidUser = (body.paidBy);
+        const paidTo = (body.paidTo);
+        const paidAmount = body.amount;
+
+         await UpdateBalances(paidUser, paidTo, paidAmount);
+
+        return res.status(200).send({ message: "Expense settled successfully!" });
+
+
+    } catch (error) {
+        return res.status(500).send({ error: "Internal server error!" });
+    }
 
 
 });

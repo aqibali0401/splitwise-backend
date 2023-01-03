@@ -8,8 +8,8 @@ const nodemailer = require('nodemailer');
 
 // Route 1: Creating a user using POST "/api/v1/auth/register"   ->  No login required
 module.exports.createUser = ([
-    body('name', 'Enter a valid name').isLength({ min: 3 }).trim(),
-    body('email', 'Enter a valid email').isEmail().normalizeEmail().trim(),
+    body('userName', 'Enter a valid name').isLength({ min: 3 }).trim(),
+    body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password must be atleast of 5 characters').isLength({ min: 5 }),
 ], async (req, res) => {
     // If their are errors, return bad request and the errors
@@ -44,7 +44,7 @@ module.exports.createUser = ([
         })
     } catch (error) {
         console.error(error.message);
-        res.send(500).send("Internal server error!!");
+        res.status(500).send("Internal server error!!");
     }
 });
 
@@ -68,7 +68,6 @@ module.exports.loginUser = ([
         if (!validUser) {
             return res.status(400).json({ error: "Please try to login with correct credentials!!" });
         }
-
         const data = {
             user: {
                 id: user._id,
@@ -80,7 +79,7 @@ module.exports.loginUser = ([
         success = true;
         res.status(200).send({
             success,
-            message: "User  111 login successfully!",
+            message: "User logdin successfully!",
             token: authtoken,
             data: data
         })
@@ -141,7 +140,7 @@ module.exports.forgotPasswordPost = ([
             service: 'gmail.com',
             auth: {
                 user: "aqibali.cse18@satyug.edu.in",
-                pass: "yhbnuwtccwpfruqi"
+                pass: "jnfpuwfzyybzdpsc"
 
             },
             port: 465,
@@ -243,12 +242,13 @@ module.exports.inviteFriend = ([
             return res.status(400).jsons({ success, error: "User already registerd with us!!" });
         }
 
-        const link = `http://localhost:5000/api/v1/auth/createuser`;
+        // const link = `http://localhost:5000/api/v1/auth/createuser`;
+        const link = `http://localhost:3000/signup`;
 
         // have to send invite email by node mailer  
         const msg = {
             from: "aqibali.cse18@satyug.edu.in", // sender address
-            to: "aqibali0401@gmail.com", // list of receivers
+            to: `${email}`, // list of receivers
             subject: "Hello ✔ NodeMailer testing for User invitation", // Subject line
             // text: `this is link for reset password ->  ${link}`, // plain text body
             html: ` <h1>This is mail form Split Wise Clone By Aqib</h1>
@@ -259,28 +259,28 @@ module.exports.inviteFriend = ([
             service: 'gmail.com',
             auth: {
                 user: "aqibali.cse18@satyug.edu.in",
-                pass: "uuantsfgeavarzge"
+                pass: "jnfpuwfzyybzdpsc"
             },
             port: 465,
             host: 'smtp.gmail.com'
         })
-        .sendMail(msg, (err) => {
-            if (err) {
-                console.log('Error occurs ', err);
-            } else {
-                console.log('Invitation Email sent successfully!!');
-            }
-        })
+            .sendMail(msg, (err) => {
+                if (err) {
+                    console.log('Error occurs ', err);
+                } else {
+                    console.log('Invitation Email sent successfully!!');
+                }
+            })
 
         success = true;
-        return res.stauts(200).send({
+        return res.status(200).send({
             success,
             message: `Invitation mail has sent to ${email} successfully!!`
         })
 
     } catch (error) {
         console.error(error.message);
-        res.send(500).send("Internal server error!!");
+        res.status(500).send("Internal server error!!");
     }
 })
 
