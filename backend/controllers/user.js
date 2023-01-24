@@ -1,5 +1,7 @@
 const User = require('../models/users');
 const Friend = require('../models/friends');
+const Expenses = require('../models/expenses');
+const SettleExpenses = require('../models/settleExpenses');
 const { body, validationResult } = require('express-validator');
 
 
@@ -189,27 +191,211 @@ exports.fetchUserDetails = async (req, res) => {
 };
 
 
-exports.inviteFriend = async (req, res) => {
-    [
-        body('email', 'Enter a valid email').isEmail().normalizeEmail().trim()
-    ], async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ error: errors.array() })
+exports.totalOwenOwedAmount = async (req, res) => {
+    try {
+        let isFriendPresent = false;
+        const userId = req.user;
+        const query_filter = {
+            $or: [
+                { added_by: userId },
+                { friend: userId }
+            ]
+        };
+        const friendList = await Friend.find(query_filter).populate('added_by friend', 'userName email');
+
+        if (!friendList) {
+            isFriendPresent = true;
+            return res.status(400).send({
+                error: "You dont have any friends till now!! "
+            })
         }
-        try {
 
-        } catch (error) {
+        // console.log('login user ki id -> ', userId);
 
+        // let totalOweAmount = 0;
+        // let totalOwedAmount = 0;
+
+        // for check friendList
+        // console.log('friendList', friendList[0].added_by.userName);
+
+
+        let totalLenahe = 0;
+        let totalDenahe = 0;
+
+        for (let i = 0; i < friendList.length; i++) {
+            if ((friendList[i].added_by._id).equals(userId)) {
+                totalLenahe += friendList[i].balances.owed;
+                totalDenahe += friendList[i].balances.owe;
+            } else if ((friendList[i].friend._id).equals(userId)) {
+                totalLenahe += friendList[i].balances.owe;
+                totalDenahe += friendList[i].balances.owed;
+            }
         }
 
+        // if (isFriendPresent) {
+        return res.status(200).json({
+            message: 'Successfully Get Owen owed Amount',
+            result: { totalLenahe, totalDenahe }
+        })
+        // } else {
+        //     return res.status(404).send({ error: "No friends found associated with you! so their is no own owed amount for you..." })
+        // } 
 
 
-
+    } catch (error) {
+        res.status(400).send({
+            error: "Could not able to fetch friends"
+        })
     }
 
+};
+
+
+exports.fetchOwenOwedAmountFromDiffrentUser = async (req, res) => {
+    try {
+        const userId = req.user;
+        const query_filter = {
+            $or: [
+                { added_by: userId },
+                { friend: userId }
+            ]
+        };
+        const friendList = await Friend.find(query_filter).populate('added_by friend', 'userName email');
+
+        if (!friendList) {
+            isFriendPresent = true;
+            return res.status(400).send({
+                error: "You dont have any friends till now!! "
+            })
+        }
+
+        // for check friendList
+        // console.log('friendList ->', friendList[0].added_by.userName);
+        // console.log('friendList ->', friendList);
+
+        let lenaHePeople = [];
+        let denaHePeople = [];
+
+        for (let i = 0; i < friendList.length; i++) {
+            if ((friendList[i].added_by._id).equals(userId)) {
+                let personOwed = { userName: '', amount: 0 };
+                let personOwe = { userName: '', amount: 0 };
+
+                if (friendList[i].balances.owed > 0) {
+                    personOwed.userName = friendList[i].friend.userName;
+                    personOwed.amount = friendList[i].balances.owed;
+                    lenaHePeople.push(personOwed);
+                }
+                if (friendList[i].balances.owe > 0) {
+                    personOwe.userName = friendList[i].friend.userName;
+                    personOwe.amount = friendList[i].balances.owe;
+                    denaHePeople.push(personOwe);
+                }
+            } else if ((friendList[i].friend._id).equals(userId)) {
+                let personOwed = { userName: '', amount: 0 };
+                let personOwe = { userName: '', amount: 0 };
+
+                if (friendList[i].balances.owed > 0) {
+                    personOwed.userName = friendList[i].added_by.userName;
+                    personOwed.amount = friendList[i].balances.owed;
+                    denaHePeople.push(personOwed);
+                }
+                if (friendList[i].balances.owe > 0) {
+                    personOwe.userName = friendList[i].added_by.userName;
+                    personOwe.amount = friendList[i].balances.owe;
+                    lenaHePeople.push(personOwe);
+                }
+            }
+        }
+
+        // console.log('denaHePeople -> ', denaHePeople);
+        // console.log('lenaHePeople -> ', lenaHePeople);
+
+        return res.status(200).json({
+            message: 'Successfully Get Owen person array!!',
+            result: { lenaHePeople, denaHePeople }
+        })
+
+
+        // const logdinUserDetail = await User.findById({ _id: userId });
+
+        // console.log('logdinUserDetail', logdinUserDetail.userName);
+
+    } catch (error) {
+        res.status(400).send({
+            error: "Internal server error occured!!"
+        })
+    }
+};
+
+exports.fetchUserExpenses = async (req, res) => {
+    try {
+        const userId = req.user;
+        const { friendId } = req.params;
+        // console.log(userId);
+        // console.log(body.userId);
+
+        const query_filter = {
+            $and: [
+                {
+                    'split_between.user': userId,
+                },
+                {
+                    'split_between.user': friendId
+                }
+            ]
+        }
+
+        const expensesArr = await Expenses.find(query_filter)
+
+        console.log(expensesArr);
+
+        res.send(expensesArr);
 
 
 
+    } catch (error) {
+        res.status(400).send({
+            error: "Internal server error occured!!"
+        })
+    }
+};
+
+exports.fetchUserSettleExpenses = async (req, res) => {
+    try {
+        const userId = req.user;
+        const { friendId } = req.params;
+
+        const query_filter = {
+            $or: [
+                {
+                    $and: [
+                        { paidBy: userId },
+                        { paidTo: friendId }
+                    ]
+                },
+                {
+                    $and: [
+                        { paidBy: friendId },
+                        { paidTo: userId }
+                    ]
+                }
+            ]
+        }
+
+
+        const settledExpenses =  await SettleExpenses.find(query_filter);
+
+        res.send(settledExpenses);
+
+
+    } catch (error) {
+        res.status(400).send({
+            error: "Internal server error occured!!"
+        })
+    }
 }
+
+
+
 

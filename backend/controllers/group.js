@@ -12,15 +12,18 @@ module.exports.createGroup = ([
     body('groupType', 'Select a valid group type').matches(/^[a-zA-Z][\w\s-]+/).isEmpty().isLength({ min: 3 })
 ], async (req, res) => {
     // If their are errors, return bad request and the errors
+
+    console.log(req.body);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ error: errors.array() });
     }
     try {
         let success = false;
 
         body.admin = req.user; //Assigning the id of group admin
-        body.groupName = fun.Capitalize(body.groupName); // To capitalize each word of group name
+        // body.groupName = fun.Capitalize(body.groupName); // To capitalize each word of group name
+        body.groupName = body.groupName;
         const query_filter = {
             $and: [
                 { groupName: body.groupName },
@@ -64,8 +67,9 @@ module.exports.createGroup = ([
         }
         else {
             success = true;
-            body.members = members;
-            const newGroup = new Group(body);
+            req.body.members = members;
+            console.log(req.body);
+            const newGroup = new Group(req.body);
             const newGroupSaved = await newGroup.save();
             if (!newGroupSaved) {
                 return res.status(401).send({ error: "Unable to create group due to some technical error! Please try again!" });
@@ -118,7 +122,7 @@ module.exports.createGroup = ([
         }
     } catch (error) {
         console.error(error.message);
-        res.send(500).send("Internal server error!!");
+        res.status(500).send({ error: 'Internal server error!' });
     }
 });
 
@@ -148,7 +152,7 @@ exports.fetchGroup = (async (req, res) => {
         }
     } catch (error) {
         console.error(error.message);
-        res.send(500).send("Internal server error!!");
+        res.send(500).send({ error: "Internal server error!!" });
     }
 
 });

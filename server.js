@@ -10,9 +10,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 var cors = require('cors')
 
-
-console.log("env->", process.env.JWT_SECRET);
-
 // const nodemailer = require('nodemailer');
 
 // const JWT_SECRET = 'some super secret';
@@ -27,7 +24,7 @@ app.use(session({
     saveUninitialized: true
 }));
 
-const dbUrl = process.env.dbUrl || 'mongodb://localhost:27017/splitwiseTest2';
+const dbUrl = process.env.dbUrl || 'mongodb://0.0.0.0:27017/splitwiseTest2';
 
 mongoose.connect(dbUrl)
     .then(() => console.log('DB Connected'))

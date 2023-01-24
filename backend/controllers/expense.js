@@ -11,6 +11,7 @@ const asyncMiddleware = require('../middleware/async');
 // Models
 const Friend = require('../models/friends');
 const Expense = require('../models/expenses');
+const SettleExpenses = require('../models/settleExpenses');
 
 
 // update balance function
@@ -95,6 +96,8 @@ exports.addExpense = asyncMiddleware(async (req, res) => {
     const userId = req.user;
     const body = { ...req.body };
 
+    let success = false;
+
     // const splitUsers = (body.split_between).slice(0);  // heap memory created
     const splitUsers = (JSON.parse(JSON.stringify(body.split_between)));
 
@@ -151,8 +154,6 @@ exports.addExpense = asyncMiddleware(async (req, res) => {
                     // Call Function here
                     await UpdateBalances(paidUser, splitUser, -splitUserBalAmount);
                     balAmount += splitUserBalAmount;
-
-
                 }
 
             }
@@ -165,9 +166,11 @@ exports.addExpense = asyncMiddleware(async (req, res) => {
     const saveNewExpense = await newExpense.save();
 
     if (!saveNewExpense) {
-        return res.status(500).send({ error: "Internal server error!" });
+        success = false;
+        return res.status(500).send({ success, error: "Internal server error!" });
     } else {
-        return res.status(201).send({ message: "Expense created successfully!" });
+        success = true;
+        return res.status(201).send({ success, message: "Expense Added Successfully!" });
     }
 
 });
@@ -388,18 +391,28 @@ exports.updateExpense = asyncMiddleware(async (req, res) => {
 exports.settleExpense = (async (req, res) => {
 
     try {
-
         const body = { ...req.body };
-
-        // const paidUser = new ObjectId(body.paidBy);
-        // const paidTo = new ObjectId(body.paidTo);
         const paidUser = (body.paidBy);
         const paidTo = (body.paidTo);
         const paidAmount = body.amount;
+        const settleDate = body.date;
+        await UpdateBalances(paidUser, paidTo, paidAmount);
 
-         await UpdateBalances(paidUser, paidTo, paidAmount);
+        const newExpense = {
+            paidBy: paidUser,
+            paidTo: paidTo,
+            amount: paidAmount,
+            date: settleDate
+        };
 
-        return res.status(200).send({ message: "Expense settled successfully!" });
+        const createNewExpense = new SettleExpenses(newExpense);
+        const addNewExpense = await createNewExpense.save();
+
+        if (addNewExpense) {
+            return res.status(200).send({ message: "Expense settled successfully!" });
+        } else {
+            return res.status(500).send({ error: "Expense is not settled,  Some server error on settling expense!" });
+        }
 
 
     } catch (error) {

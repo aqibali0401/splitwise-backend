@@ -230,7 +230,7 @@ module.exports.inviteFriend = ([
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ error: errors.array() });
     }
     try {
         const { email } = req.body;
@@ -280,7 +280,7 @@ module.exports.inviteFriend = ([
 
     } catch (error) {
         console.error(error.message);
-        res.status(500).send("Internal server error!!");
+        res.status(500).send({ error: "Invalid email id or some error occur!" });
     }
 })
 
