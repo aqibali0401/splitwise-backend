@@ -4,6 +4,8 @@ const Expenses = require('../models/expenses');
 const SettleExpenses = require('../models/settleExpenses');
 const { body, validationResult } = require('express-validator');
 
+const nodemailer = require('nodemailer');
+
 
 exports.getUsers = async (req, res, next) => {
 
@@ -177,11 +179,11 @@ exports.fetchFriends = async (req, res) => {
 
 exports.fetchUserDetails = async (req, res) => {
     try {
-        const userId = req.user;
-        const friendList = await User.findById({ _id: userId });
+        const { userId } = req.params;
+        const UserDetails = await User.findById({ _id: userId });
         return res.status(200).send({
             message: 'User details fetched successfully',
-            result: friendList
+            result: UserDetails
         })
     } catch (error) {
         return res.status(400).send({
@@ -383,17 +385,119 @@ exports.fetchUserSettleExpenses = async (req, res) => {
             ]
         }
 
+        const settledExpenses = await SettleExpenses.find(query_filter).populate('paidBy paidTo');
 
-        const settledExpenses =  await SettleExpenses.find(query_filter);
+        // array.sort(function (a, b) {
+        //     // Turn your strings into dates, and then subtract them
+        //     // to get a value that is either negative, positive, or zero.
+        //     return new Date(b.date) - new Date(a.date);
+        // });
+
 
         res.send(settledExpenses);
-
 
     } catch (error) {
         res.status(400).send({
             error: "Internal server error occured!!"
         })
     }
+}
+
+
+
+exports.remindUser = async (req, res) => {
+
+    try {
+        let sendMail = false;
+        const userId = req.user;
+        const { friendId } = req.params;
+
+        // console.log('userid----',userId);
+        // console.log('friendId----',friendId);
+
+        const userDetail = await User.findById({ _id: friendId });
+        const userEmail = userDetail.email;
+
+        // console.log('friendEmail', userEmail);
+
+        const query_filter = {
+            $or: [
+                {
+                    $and: [
+                        { added_by: userId },
+                        { friend: friendId }
+                    ]
+                },
+                {
+                    $and: [
+                        { friend: userId },
+                        { added_by: friendId }
+                    ]
+                }
+            ]
+        };
+
+        const result = await Friend.find(query_filter);
+
+        console.log(result);
+
+        if (result[0].added_by.equals(userId)) {
+            if (result[0].balances.owed > 0) {
+                sendMail = true;
+            }
+        } else if (result[0].added_by.equals(friendId)) {
+            if (result[0].balances.owe > 0) {
+                sendMail = true;
+            }
+        }
+
+        if (sendMail) {
+            // have to send reminder email by node mailer  
+            const msg = {
+                from: "aqibali.cse18@satyug.edu.in", // sender address
+                to: `${userEmail}`, // list of receivers
+                subject: "Hello ✔ NodeMailer testing for Reminding User Owe amount", // Subject line
+                // text: `this is link for reset password ->  ${link}`, // plain text body
+                html: ` <h1>This is mail form Split Wise Clone By Aqib</h1>
+                <h3>are yaar apne dost ke pese vapas kar na, bechare ko jarurat he abhi</h3>
+             <a href="#" style="color: blue;">Click here for register with splitwise</a>`, // html body
+            }
+
+            nodemailer.createTransport({
+                service: 'gmail.com',
+                auth: {
+                    user: "aqibali.cse18@satyug.edu.in",
+                    pass: "jnfpuwfzyybzdpsc"
+                },
+                port: 465,
+                host: 'smtp.gmail.com'
+            })
+                .sendMail(msg, (err) => {
+                    if (err) {
+                        console.log('Error occurs ', err);
+                        return res.status(400).json({ sendMail, error: err })
+                    } else {
+                        console.log('Invitation Email sent successfully!!');
+                        return res.status(200).send({
+                            sendMail,
+                            message: `Reminder mail has sent to ${userEmail} successfully!!`
+                        })
+                    }
+                })
+
+        } else {
+            return res.status(200).send({
+                sendMail,
+                message: "Your friend doesnt owe your money!!"
+            })
+        }
+
+    } catch (error) {
+        res.status(400).send({
+            error: "Internal server error occured!!"
+        })
+    }
+
 }
 
 

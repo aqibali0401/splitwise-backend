@@ -264,13 +264,13 @@ module.exports.inviteFriend = ([
             port: 465,
             host: 'smtp.gmail.com'
         })
-            .sendMail(msg, (err) => {
-                if (err) {
-                    console.log('Error occurs ', err);
-                } else {
-                    console.log('Invitation Email sent successfully!!');
-                }
-            })
+        .sendMail(msg, (err) => {
+            if (err) {
+                console.log('Error occurs ', err);
+            } else {
+                console.log('Invitation Email sent successfully!!');
+            }
+        })
 
         success = true;
         return res.status(200).send({
