@@ -440,14 +440,16 @@ exports.remindUser = async (req, res) => {
         const result = await Friend.find(query_filter);
 
         console.log(result);
-
+        let amount = 0;
         if (result[0].added_by.equals(userId)) {
             if (result[0].balances.owed > 0) {
                 sendMail = true;
+                amount = result[0].balances.owed;
             }
         } else if (result[0].added_by.equals(friendId)) {
             if (result[0].balances.owe > 0) {
                 sendMail = true;
+                amount = result[0].balances.owe;
             }
         }
 
@@ -459,7 +461,7 @@ exports.remindUser = async (req, res) => {
                 subject: "Hello ✔ NodeMailer testing for Reminding User Owe amount", // Subject line
                 // text: `this is link for reset password ->  ${link}`, // plain text body
                 html: ` <h1>This is mail form Split Wise Clone By Aqib</h1>
-                <h3>are yaar apne dost ke pese vapas kar na, bechare ko jarurat he abhi</h3>
+                <h3>are yaar apne dost ke ${amount} rupe vapas kar na, usko ko jarurat he abhi, tujhe yaad dilane ke liye ye mail bheja he usne, jaldi se pese lota, abhi paytm kar bhaiii, are bhai karde paytm, chal dobara le lio usse bhai paytm karde use zarurat he abhi, </h3>
              <a href="#" style="color: blue;">Click here for register with splitwise</a>`, // html body
             }
 
